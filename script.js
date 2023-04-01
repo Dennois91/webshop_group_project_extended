@@ -11,6 +11,41 @@ function fetchAllProducts() {
         });
 }
 
+function getCartItems() {
+    const cartItemsContainer = document.getElementById("cartItems");
+
+    let cart = new Map(JSON.parse(localStorage.getItem('cart')));
+    console.log(cart)
+
+    if (cart.size === 0) {
+        const emptyCartMessage = document.createElement("p");
+        emptyCartMessage.textContent = "Your cart is empty.";
+        cartItemsContainer.appendChild(emptyCartMessage);
+        return;
+    }
+    cart.forEach(function (quantity, productId) {
+        fetch('https://fakestoreapi.com/products/' + productId)
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (data) {
+                const cartItem = document.createElement("div");
+                cartItem.classList.add("col-12", "my-3", "border");
+                cartItem.innerHTML = `
+                    <h3>${data.title}</h3>
+                    <p>Price: ${data.price} €</p>
+                    <p>Quantity: ${quantity}</p>
+                `;
+                cartItemsContainer.appendChild(cartItem);
+            })
+            .catch(function (err) {
+                console.log('error: ' + err);
+            });
+    });
+
+
+}
+
 function appendPreviews(data) {
     const mainContainer = document.getElementById("getProductPreviews");
     for (let i = 0; i < data.length; i++) {
@@ -34,9 +69,16 @@ function appendPreviews(data) {
             '<img src=' + data[i].image + ' class="img-fluid" alt="product-picture">' + '<br>' +
             '<p class="description">' + data[i].description + '</p>' +
             '<div class="modal-footer justify-content-center"> ' +
-            '<button class="btn btn-primary opacity-90 col-6 mx-3" onclick="openOrderPage(this.id)" id="' + (i + 1) +
-            '">Order</button>' +
+            '<button class="btn btn-primary opacity-90 col-6 mx-3" onclick="addToCart(this.id, ' + (i + 1) + ')" id="' + (i + 1) + '">Order</button>' +
             '<button class="btn btn-danger opacity-90 col-6 mx-3" data-bs-dismiss="modal">Close</button></div> ' +
+            '<div class="toast align-items-center text-white bg-success" data-toast-id="' + (i + 1) + '" role="alert" aria-live="assertive" aria-atomic="true">\n' +
+            '    <div class="d-flex">\n' +
+            '        <div class="toast-body">\n' +
+            '            Product added to cart.\n' +
+            '        </div>\n' +
+            '        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>\n' +
+            '    </div>\n' +
+            '</div>' +
             '</div>' +
             '</div>' +
             '</div>' +
@@ -44,6 +86,23 @@ function appendPreviews(data) {
             '</div>';
         mainContainer.appendChild(element);
     }
+}
+
+
+let cart = new Map(JSON.parse(localStorage.getItem('cart')));
+
+function addToCart(productId, toastId) {
+    console.log(productId)
+    if (cart.has(productId)) {
+        cart.set(productId, cart.get(productId) + 1);
+    } else {
+        cart.set(productId, 1)
+    }
+    localStorage.setItem('cart', JSON.stringify(Array.from(cart)))
+    console.log(cart)
+    const toastEl = document.querySelector('.toast[data-toast-id="' + toastId + '"]');
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
 }
 
 function openOrderPage(id) {
