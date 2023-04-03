@@ -67,12 +67,27 @@
 </header>
 
 <main class="container-fluid flex-grow-1">
-    <div class="container">
-        <h2 class="text-center">Cart</h2>
 
-         <div id="cartItems" class="row"> gets products with JS </div>
+    <div class="container">
+        <div id="cartItems" class="row"></div> <!-- get items JS -->
+        <div id="orderSum" class="alert alert-info mt-3 d-none" role="alert"></div>
+
+        <div id="emptyCartMessage" class="d-none text-center">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h1>Your cart is empty.</h1>
+                </div>
+            </div>
+        </div>
 
     </div>
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-6 d-flex justify-content-center">
+            <button id="emptyCartBtn" class="btn btn-danger col-6 d-none" onclick="emptyCart()">Empty cart</button>
+        </div>
+    </div>
+
 </main>
 
 <footer class="bg-light">

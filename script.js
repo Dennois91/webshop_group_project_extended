@@ -11,39 +11,127 @@ function fetchAllProducts() {
         });
 }
 
-function getCartItems() {
+function updateCartDisplay(cart, orderSum, emptyCartMsg) {
+    const emptyCartBtn = document.getElementById('emptyCartBtn');
+    if (cart.size === 0) {
+        emptyCartBtn.classList.add('d-none');
+        orderSum.classList.add('d-none')
+        emptyCartMsg.classList.remove('d-none');
+    } else {
+        emptyCartBtn.classList.remove('d-none');
+        orderSum.classList.remove('d-none');
+        emptyCartMsg.classList.add('d-none');
+    }
+}
+
+function createCartItem(data, quantity, productId) {
+    const cartItem = document.createElement("div");
+    cartItem.classList.add("col-12", "my-3", "border");
+    cartItem.innerHTML = `
+        <h3>${data.title}</h3>
+        <p>Price: ${data.price} €</p>
+        <p>Quantity: <span id="quantity-${productId}">${quantity}</span></p>
+        <button id="increase-${productId}" class="btn btn-primary">+</button>
+        <button id="decrease-${productId}" class="btn btn-primary">-</button>
+    `;
+    return cartItem;
+}
+
+function fetchProducts(productId) {
+    return fetch('https://fakestoreapi.com/products/' + productId)
+        .then(function (response) {
+            return response.json();
+        })
+        .catch(function (err) {
+            console.log('error: ' + err);
+        });
+}
+
+async function increaseQuantity(productId) {
+    let cart = new Map(JSON.parse(localStorage.getItem('cart')));
+    let currentQuantity = cart.get(productId);
+    currentQuantity++;
+    cart.set(productId, currentQuantity);
+    localStorage.setItem('cart', JSON.stringify(Array.from(cart.entries())));
+    try {
+        await getCartItems();
+    } catch (error) {
+        console.error('Error updating cart items after increasing quantity:', error);
+    }
+}
+
+async function decreaseQuantity(productId) {
+    let cart = new Map(JSON.parse(localStorage.getItem('cart')));
+    let currentQuantity = cart.get(productId);
+    currentQuantity--;
+
+    if (currentQuantity <= 0) {
+        cart.delete(productId);
+    } else {
+        cart.set(productId, currentQuantity);
+    }
+
+    localStorage.setItem('cart', JSON.stringify(Array.from(cart.entries())));
+    try {
+        await getCartItems();
+    } catch (error) {
+        console.error('Error updating cart items after decreasing quantity:', error);
+    }
+}
+
+
+async function displayCartItems(cartItemsContainer, cart, orderSum) {
+    orderSum.innerHTML = '';
+    cartItemsContainer.innerHTML = '';
+    let sumOfOrder = 0;
+    const cartEntries = Array.from(cart.entries());
+
+    cartEntries.sort((a, b) => a[0] - b[0]);
+
+    // Fetch all products data and store them in an array
+    const productsData = await Promise.all(
+        cartEntries.map(([productId, _]) => fetchProducts(productId))
+    );
+
+    // Iterate through the cartEntries and productsData to display the cart items
+    cartEntries.forEach(([productId, quantity], index) => {
+        const data = productsData[index];
+        sumOfOrder += (data.price * quantity);
+        const cartItem = createCartItem(data, quantity, productId);
+        cartItemsContainer.appendChild(cartItem);
+
+        document.getElementById(`increase-${productId}`).addEventListener('click', () => {
+            increaseQuantity(productId);
+        });
+        document.getElementById(`decrease-${productId}`).addEventListener('click', () => {
+            decreaseQuantity(productId);
+        });
+        orderSum.innerHTML = `<strong>Total sum (including VAT):</strong> €${sumOfOrder.toFixed(2)}`;
+    });
+}
+
+async function getCartItems() {
+    let cart = new Map(JSON.parse(localStorage.getItem('cart')));
+    const emptyCartMsg = document.getElementById('emptyCartMessage');
+    const orderSum = document.getElementById('orderSum');
     const cartItemsContainer = document.getElementById("cartItems");
 
-    let cart = new Map(JSON.parse(localStorage.getItem('cart')));
-    console.log(cart)
+    updateCartDisplay(cart, orderSum, emptyCartMsg);
 
-    if (cart.size === 0) {
-        const emptyCartMessage = document.createElement("p");
-        emptyCartMessage.textContent = "Your cart is empty.";
-        cartItemsContainer.appendChild(emptyCartMessage);
-        return;
+    try {
+        await displayCartItems(cartItemsContainer, cart, orderSum);
+    } catch (error) {
+        console.error('Error displaying cart items:', error);
     }
-    cart.forEach(function (quantity, productId) {
-        fetch('https://fakestoreapi.com/products/' + productId)
-            .then(function (response) {
-                return response.json();
-            })
-            .then(function (data) {
-                const cartItem = document.createElement("div");
-                cartItem.classList.add("col-12", "my-3", "border");
-                cartItem.innerHTML = `
-                    <h3>${data.title}</h3>
-                    <p>Price: ${data.price} €</p>
-                    <p>Quantity: ${quantity}</p>
-                `;
-                cartItemsContainer.appendChild(cartItem);
-            })
-            .catch(function (err) {
-                console.log('error: ' + err);
-            });
-    });
+}
 
-
+async function emptyCart() {
+    localStorage.removeItem('cart');
+    try {
+        await getCartItems();
+    } catch (error) {
+        console.error('Error updating cart items after emptying cart:', error);
+    }
 }
 
 function appendPreviews(data) {
